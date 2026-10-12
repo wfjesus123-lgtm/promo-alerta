@@ -6,6 +6,7 @@ Uso:
   python promo_alerta.py            -> roda normal (busca, filtra, envia o que é novo)
   python promo_alerta.py --teste    -> só mostra na tela o que encontraria (não envia, não salva)
   python promo_alerta.py --ping     -> manda uma mensagem de teste no WhatsApp
+  python promo_alerta.py --so-pelando -> lê só o Pelando (usado no PC; a nuvem lê o Promobit)
 """
 import html
 import json
@@ -160,8 +161,16 @@ def main():
         log("Mensagem de teste enviada.")
         return
 
+    # o Pelando bloqueia servidores, então a nuvem lê só o Promobit
+    # e o PC (com --so-pelando) lê só o Pelando
+    fontes = [("Pelando", pelando), ("Promobit", promobit)]
+    if os.environ.get("GITHUB_ACTIONS"):
+        fontes = [("Promobit", promobit)]
+    elif "--so-pelando" in sys.argv:
+        fontes = [("Pelando", pelando)]
+
     ofertas = []
-    for nome, fonte in (("Pelando", pelando), ("Promobit", promobit)):
+    for nome, fonte in fontes:
         try:
             achadas = fonte()
             ofertas += achadas
