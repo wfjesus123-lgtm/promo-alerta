@@ -1,0 +1,38 @@
+name: Promo Alerta
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: promo-alerta
+  cancel-in-progress: false
+
+jobs:
+  rodar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Buscar promoções e enviar no WhatsApp
+        env:
+          CALLMEBOT_TELEFONE: ${{ secrets.CALLMEBOT_TELEFONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+        run: python promo_alerta.py
+
+      - name: Salvar ofertas já enviadas
+        run: |
+          git config user.name "promo-alerta"
+          git config user.email "promo-alerta@users.noreply.github.com"
+          git add vistos.json
+          git diff --cached --quiet || git commit -m "atualiza vistos"
+          git push
