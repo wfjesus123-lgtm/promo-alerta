@@ -78,7 +78,7 @@ def pelando():
                 "preco": d.get("price"),
                 "desconto": d.get("discountPercentage") or 0,
                 "loja": (d.get("store") or {}).get("name") or "",
-                "link": "https://www.pelando.com.br/d/" + d["slug"],
+                "link": d.get("sourceUrl") or "https://www.pelando.com.br/d/" + d["slug"],
                 "site": "Pelando",
             })
     return ofertas
@@ -102,9 +102,24 @@ def promobit():
             "desconto": round(desc),
             "loja": o.get("store_name") or "",
             "link": f"https://www.promobit.com.br/oferta/{o['offer_slug']}/",
+            "promobit_id": o["offer_id"],
             "site": "Promobit",
         })
     return ofertas
+
+
+def link_da_loja(o):
+    """Troca o link do Promobit pelo link direto da loja (só para as ofertas que vão ser enviadas)."""
+    if "promobit_id" not in o:
+        return
+    try:
+        pagina = baixar(f"https://www.promobit.com.br/Redirect/to/{o['promobit_id']}/")
+        for url in re.findall(r'(?:location(?:\.href)?\s*=\s*|url=|href=)["\']?(https?://[^"\'\s>]+)', pagina):
+            if "promobit.com.br" not in url:
+                o["link"] = html.unescape(url)
+                return
+    except Exception as e:
+        log(f"Não achei o link da loja da oferta {o['promobit_id']}: {e}")
 
 
 # ---------- Filtro e envio ----------
@@ -180,6 +195,8 @@ def main():
     boas = [o for o in ofertas if interessa(o)]
 
     if teste:
+        for o in boas:
+            link_da_loja(o)
         print(f"{len(ofertas)} ofertas lidas, {len(boas)} passam no filtro:\n")
         for o in boas:
             print(formatar(o), "\n")
@@ -198,6 +215,8 @@ def main():
         log(f"Primeira execução: {len(boas)} ofertas atuais marcadas como vistas.")
     elif novas:
         cfg = carregar_config()
+        for o in novas:
+            link_da_loja(o)
         # agrupa até 5 ofertas por mensagem
         for i in range(0, len(novas), 5):
             bloco = novas[i:i + 5]
