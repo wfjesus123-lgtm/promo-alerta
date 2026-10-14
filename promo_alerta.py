@@ -28,6 +28,8 @@ LOG = PASTA / "log.txt"
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/130.0 Safari/537.36")
 
+MAX_POR_MENSAGEM = 8
+
 PALAVRAS_BUG = re.compile(
     r"\bbug(ad[oa]s?|s)?\b|erro de pre[cç]o|pre[cç]o errado|pre[cç]o bugado|glitch",
     re.IGNORECASE,
@@ -216,16 +218,23 @@ def main():
         log(f"Primeira execução: {len(boas)} ofertas atuais marcadas como vistas.")
     elif novas:
         cfg = carregar_config()
+        # uma mensagem só por verificação: bugs primeiro, depois maior desconto, sem títulos repetidos
+        novas.sort(key=lambda o: (not PALAVRAS_BUG.search(o["titulo"]), -(o["desconto"] or 0)))
+        escolhidas, titulos = [], set()
         for o in novas:
+            chave = o["titulo"].strip().lower()
+            if chave not in titulos:
+                titulos.add(chave)
+                escolhidas.append(o)
+            if len(escolhidas) == MAX_POR_MENSAGEM:
+                break
+        for o in escolhidas:
             link_da_loja(o)
-        # agrupa até 5 ofertas por mensagem
-        for i in range(0, len(novas), 5):
-            bloco = novas[i:i + 5]
-            enviar(cfg, "\n\n".join(formatar(o) for o in bloco))
-            for o in bloco:
-                vistos[o["id"]] = agora
-            time.sleep(5)
-        log(f"{len(novas)} oferta(s) nova(s) enviada(s).")
+        # se o envio falhar, levanta erro e nada é marcado como visto (tenta de novo na próxima)
+        enviar(cfg, "\n\n".join(formatar(o) for o in escolhidas))
+        for o in novas:
+            vistos[o["id"]] = agora
+        log(f"{len(escolhidas)} oferta(s) enviada(s) de {len(novas)} nova(s).")
     else:
         log(f"Nada novo ({len(ofertas)} ofertas lidas).")
 
