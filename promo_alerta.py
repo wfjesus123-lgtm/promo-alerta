@@ -147,9 +147,9 @@ def enviar(cfg, texto):
         "text": texto,
         "apikey": cfg["apikey"],
     })
-    resp = baixar(url)
-    if "queued" not in resp.lower() and "sent" not in resp.lower():
-        raise RuntimeError("CallMeBot respondeu: " + re.sub(r"<[^>]+>|\s+", " ", resp)[:200])
+    resp = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", baixar(url))).lower()
+    if "not sent" in resp or "0 messages left" in resp or ("queued" not in resp and "sent" not in resp):
+        raise RuntimeError("CallMeBot não enviou: " + resp[:200])
 
 
 def carregar_config():
