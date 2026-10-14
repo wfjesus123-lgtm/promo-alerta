@@ -21,7 +21,8 @@ from pathlib import Path
 
 PASTA = Path(__file__).resolve().parent
 CONFIG = PASTA / "config.json"
-VISTOS = PASTA / "vistos.json"
+# a nuvem salva no vistos.json (versionado); o PC usa um arquivo próprio
+VISTOS = PASTA / ("vistos.json" if os.environ.get("GITHUB_ACTIONS") else "vistos_pc.json")
 LOG = PASTA / "log.txt"
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
